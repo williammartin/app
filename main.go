@@ -13,6 +13,16 @@ import (
 	yaml "gopkg.in/yaml.v2"
 )
 
+var InitCommand = cli.Command{
+	Name: "init",
+	Action: func(ctx *cli.Context) error {
+		target := ctx.Args().First()
+		ioutil.WriteFile(filepath.Join(target, "Appfile"), []byte("builder-image: golang"), 0755)
+
+		return nil
+	},
+}
+
 var BuildCommand = cli.Command{
 	Name: "build",
 	Flags: []cli.Flag{
@@ -31,7 +41,7 @@ var BuildCommand = cli.Command{
 
 		appfile := loadAppfile(filepath.Join(buildDir, "Appfile"))
 
-		build(buildDir, appfile.Image, appfile.Bind, imageTag)
+		build(buildDir, appfile.BuilderImage, appfile.Image, appfile.Bind, imageTag)
 
 		return nil
 	},
@@ -48,11 +58,16 @@ var RunCommand = cli.Command{
 	Action: func(ctx *cli.Context) error {
 		buildDir := resolveBuildDir(ctx.Args().First())
 		appfile := loadAppfile(filepath.Join(buildDir, "Appfile"))
-		build(buildDir, appfile.Image, appfile.Bind, "lol/wtf")
+
+		build(buildDir, appfile.BuilderImage, appfile.Image, appfile.Bind, "lol/wtf")
 
 		command := ctx.String("command")
 		if command == "" {
 			command = appfile.Command
+		}
+
+		if command == "" {
+			command = "/app"
 		}
 
 		// todo: remove lol/wtf and use --iid
@@ -69,9 +84,10 @@ var RunCommand = cli.Command{
 }
 
 type Appfile struct {
-	Image   string
-	Bind    string
-	Command string
+	BuilderImage string `yaml:"builder-image"`
+	Image        string
+	Bind         string
+	Command      string
 }
 
 func loadAppfile(appfilePath string) *Appfile {
@@ -89,8 +105,24 @@ func loadAppfile(appfilePath string) *Appfile {
 	return &appfile
 }
 
-func build(buildDir, image, bind, tag string) {
+func build(buildDir, builderImage, image, bind, tag string) {
 	dockerfile := fmt.Sprintf("FROM %s\nADD . %s", image, bind)
+	if builderImage == "golang" {
+		dockerfile = `
+		FROM golang:1.8 as build
+
+		WORKDIR /go/src/app
+		COPY . .
+
+		RUN go-wrapper download   # "go get -d -v ./..."
+		RUN go-wrapper install
+
+		FROM busybox
+		COPY --from=build /go/bin/app /
+		CMD ["/app"]
+		`
+	}
+
 	buildCmd := exec.Command("docker", "build", buildDir, "-t", tag, "-f", "-")
 	buildCmd.Stdin = bytes.NewBuffer([]byte(dockerfile))
 	if output, err := buildCmd.CombinedOutput(); err != nil {
@@ -126,6 +158,7 @@ func main() {
 	app.Commands = []cli.Command{
 		BuildCommand,
 		RunCommand,
+		InitCommand,
 	}
 
 	app.Run(os.Args)

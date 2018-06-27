@@ -90,6 +90,12 @@ var _ = Describe("Integration", func() {
 				appCmd := exec.Command(appBinPath, "run", fixture, "-c", "/tmp/app/hi")
 				Eventually(execBin(appCmd), "5s").Should(gbytes.Say("hi"))
 			})
+
+			It("auto-builds go apps when the image is 'golang'", func() {
+				//todo: change overloading of image to "builder-image"
+				appCmd := exec.Command(appBinPath, "run", "./test_assets/uncompiled-golang")
+				Eventually(execBin(appCmd), "5m").Should(gbytes.Say("I got compiled!"))
+			})
 		})
 
 		Context("when the app is on GitHub", func() {
@@ -103,8 +109,16 @@ var _ = Describe("Integration", func() {
 	Describe("Testing the app", func() {
 	})
 
-	Describe("The Init Command", func() {
-		PIt("creates an appfile for the requested language", func() {})
+	Describe("init", func() {
+		It("creates an appfile for the requested language", func() {
+			emptyDir := mktmp()
+			appCmd := exec.Command(appBinPath, "init", emptyDir)
+			Eventually(execBin(appCmd), "1m").Should(gexec.Exit(0))
+
+			b, err := ioutil.ReadFile(filepath.Join(emptyDir, "Appfile"))
+			Expect(err).NotTo(HaveOccurred())
+			Expect(b).To(Equal([]byte(`builder-image: golang`)))
+		})
 	})
 })
 

@@ -1,3 +1,7 @@
+# TL;dr
+
+It's create-react-app for Dockerfiles
+
 # A Dev Workflow using `app`
 
 1. To start off, just write your app. 
