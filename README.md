@@ -14,3 +14,20 @@ It's create-react-app for Dockerfiles
 1. `app build github.com/williammartin/myapp -t foo/bar; docker push foo/bar; cf push -o foo/bar`
 1. Bonus points: `cf push github.com/williammartin/myapp` (cf responsible for patching your rootfs)
 1. Bonus points: `app ci .` builds concourse yml.
+
+
+
+```
+1. create a main.go
+2. runa init
+3. runa run .
+
+4. push to git
+5. runa run ....
+
+
+
+
+3. runa test
+
+```

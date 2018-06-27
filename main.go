@@ -48,30 +48,48 @@ var BuildCommand = cli.Command{
 }
 
 var RunCommand = cli.Command{
-	Name: "run",
-	Flags: []cli.Flag{
-		cli.StringFlag{
-			Name:  "command, c",
-			Usage: "command to run",
-		},
-	},
+	SkipFlagParsing: true,
+	Name:            "run",
 	Action: func(ctx *cli.Context) error {
 		buildDir := resolveBuildDir(ctx.Args().First())
 		appfile := loadAppfile(filepath.Join(buildDir, "Appfile"))
 
 		build(buildDir, appfile.BuilderImage, appfile.Image, appfile.Bind, "lol/wtf")
 
-		command := ctx.String("command")
-		if command == "" {
-			command = appfile.Command
+		args := []string{"run", "--rm", "-i", "lol/wtf"}
+		if appfile.Command != "" {
+			args = append(args, appfile.Command)
 		}
 
-		if command == "" {
-			command = "/app"
-		}
+		args = append(args, ctx.Args().Tail()...)
 
 		// todo: remove lol/wtf and use --iid
-		runCmd := exec.Command("docker", "run", "--rm", "-i", "lol/wtf", command)
+		runCmd := exec.Command("docker", args...)
+		runCmd.Stdin = os.Stdin
+		runCmd.Stdout = os.Stdout
+		runCmd.Stderr = os.Stderr
+		if err := runCmd.Run(); err != nil {
+			panic(err)
+		}
+
+		return nil
+	},
+}
+
+var ExecCommand = cli.Command{
+	SkipFlagParsing: true,
+	Name:            "exec",
+	Action: func(ctx *cli.Context) error {
+		buildDir := resolveBuildDir(ctx.Args().First())
+		appfile := loadAppfile(filepath.Join(buildDir, "Appfile"))
+
+		build(buildDir, appfile.BuilderImage, appfile.Image, appfile.Bind, "lol/wtf")
+
+		args := []string{"run", "--rm", "-i", "lol/wtf"}
+		args = append(args, ctx.Args().Tail()...)
+
+		// todo: remove lol/wtf and use --iid
+		runCmd := exec.Command("docker", args...)
 		runCmd.Stdin = os.Stdin
 		runCmd.Stdout = os.Stdout
 		runCmd.Stderr = os.Stderr
@@ -179,6 +197,7 @@ func main() {
 	app.Commands = []cli.Command{
 		BuildCommand,
 		RunCommand,
+		ExecCommand,
 		InitCommand,
 		TestCommand,
 	}

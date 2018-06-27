@@ -86,15 +86,14 @@ var _ = Describe("Integration", func() {
 				PIt("runs the app using the -i and -b flags", func() {})
 			})
 
-			It("allows overriding the command", func() {
-				runaCmd := exec.Command(runaBinPath, "run", fixture, "-c", "/tmp/app/hi")
-				Eventually(execBin(runaCmd), "5s").Should(gbytes.Say("hi"))
-			})
-
 			It("auto-builds go apps when the image is 'golang'", func() {
-				//todo: change overloading of image to "builder-image"
 				runaCmd := exec.Command(runaBinPath, "run", "./test_assets/uncompiled-golang")
 				Eventually(execBin(runaCmd), "5m").Should(gbytes.Say("I got compiled!"))
+			})
+
+			It("passes extra arguments to the command", func() {
+				runaCmd := exec.Command(runaBinPath, "run", "./test_assets/haz_busybox", "--first-arg", "first-value")
+				Eventually(execBin(runaCmd), "5s").Should(gbytes.Say("--first-arg first-value"))
 			})
 		})
 
@@ -103,6 +102,13 @@ var _ = Describe("Integration", func() {
 				runaCmd := exec.Command(runaBinPath, "run", "https://github.com/williammartin/myapp")
 				Eventually(execBin(runaCmd), "1m").Should(gbytes.Say("hello"))
 			})
+		})
+	})
+
+	Describe("Execing a command", func() {
+		It("allows overriding the command", func() {
+			runaCmd := exec.Command(runaBinPath, "exec", fixture, "/tmp/app/hi")
+			Eventually(execBin(runaCmd), "5s").Should(gbytes.Say("hi"))
 		})
 	})
 
