@@ -14,16 +14,24 @@ import (
 )
 
 var _ = Describe("Integration", func() {
-	var fixture string
+	var (
+		fixture string
+		tempDir string
+	)
 
 	BeforeEach(func() {
+		tempDir = mktmp()
 		fixture = "./test_assets/itchy"
+	})
+
+	AfterEach(func() {
+		Expect(os.RemoveAll(tempDir)).To(Succeed())
 	})
 
 	Describe("build", func() {
 		JustBeforeEach(func() {
 			appCmd := exec.Command(appBinPath, "build", fixture, "-t", "my/app")
-			Eventually(execBin(appCmd)).Should(gexec.Exit(0))
+			Eventually(execBin(appCmd), "5m").Should(gexec.Exit(0))
 		})
 
 		AfterEach(func() {
@@ -38,16 +46,6 @@ var _ = Describe("Integration", func() {
 			})
 
 			Describe("the created image", func() {
-				var tempDir string
-
-				BeforeEach(func() {
-					tempDir = mktmp()
-				})
-
-				AfterEach(func() {
-					Expect(os.RemoveAll(tempDir)).To(Succeed())
-				})
-
 				It("is based on the requested rootfs", func() {
 					combine("my/app", tempDir)
 					Expect(filepath.Join(tempDir, "img", "hello")).To(BeAnExistingFile())
@@ -60,12 +58,47 @@ var _ = Describe("Integration", func() {
 			})
 		})
 
-		Describe("Run the image", func() {
-			It("executes the command in the Appfile", func() {
-				appCmd := exec.Command(appBinPath, "run", fixture)
-				Eventually(execBin(appCmd)).Should(gbytes.Say("hello"))
+		Describe("when the app is on GitHub", func() {
+			BeforeEach(func() {
+				fixture = "https://github.com/williammartin/myapp"
+			})
+
+			It("is based on the requested rootfs", func() {
+				combine("my/app", tempDir)
+				Expect(filepath.Join(tempDir, "img", "hello")).To(BeAnExistingFile())
+			})
+
+			It("has the user's code at the requested location", func() {
+				combine("my/app", tempDir)
+				Expect(filepath.Join(tempDir, "img", "tmp", "app", "myfile")).To(BeAnExistingFile())
 			})
 		})
+	})
+
+	Describe("Run the app", func() {
+		Context("with a local app", func() {
+			It("executes the command in the Appfile", func() {
+				appCmd := exec.Command(appBinPath, "run", fixture)
+				Eventually(execBin(appCmd), "5s").Should(gbytes.Say("hello"))
+			})
+
+			Context("when there is no appfile", func() {
+				PIt("runs the app using the -i and -b flags", func() {})
+			})
+
+			PIt("allows overriding the command", func() {})
+		})
+
+		Context("when the app is on GitHub", func() {
+			It("executes the command in the Appfile", func() {
+				appCmd := exec.Command(appBinPath, "run", "https://github.com/williammartin/myapp")
+				Eventually(execBin(appCmd), "1m").Should(gbytes.Say("hello"))
+			})
+		})
+	})
+
+	Describe("The Init Command", func() {
+		PIt("creates an appfile for the requested language", func() {})
 	})
 })
 

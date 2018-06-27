@@ -3,6 +3,8 @@ package main
 import (
 	"bytes"
 	"fmt"
+	"io/ioutil"
+	"net/url"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -20,7 +22,7 @@ var BuildCommand = cli.Command{
 		},
 	},
 	Action: func(ctx *cli.Context) error {
-		buildDir := ctx.Args().First()
+		buildDir := resolveBuildDir(ctx.Args().First())
 
 		imageTag := ctx.String("target")
 		if imageTag == "" {
@@ -38,12 +40,11 @@ var BuildCommand = cli.Command{
 var RunCommand = cli.Command{
 	Name: "run",
 	Action: func(ctx *cli.Context) error {
-		buildDir := ctx.Args().First()
-
+		buildDir := resolveBuildDir(ctx.Args().First())
 		appfile := loadAppfile(filepath.Join(buildDir, "Appfile"))
-
 		build(buildDir, appfile.Image, appfile.Bind, "lol/wtf")
 
+		// todo: remove lol/wtf and use --iid
 		runCmd := exec.Command("docker", "run", "--rm", "-i", "lol/wtf", appfile.Command)
 		runCmd.Stdin = os.Stdin
 		runCmd.Stdout = os.Stdout
@@ -84,6 +85,28 @@ func build(buildDir, image, bind, tag string) {
 	if output, err := buildCmd.CombinedOutput(); err != nil {
 		panic(string(output))
 	}
+}
+
+func resolveBuildDir(dir string) string {
+	u, err := url.Parse(dir)
+	if err != nil {
+		panic(err)
+	}
+
+	if u.Scheme == "https" {
+		tmp, err := ioutil.TempDir("", "")
+		if err != nil {
+			panic(err)
+		}
+
+		if out, err := exec.Command("git", "clone", dir, tmp).CombinedOutput(); err != nil {
+			panic(string(out))
+		}
+
+		return tmp
+	}
+
+	return dir
 }
 
 func main() {
