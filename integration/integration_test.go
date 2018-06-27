@@ -107,6 +107,10 @@ var _ = Describe("Integration", func() {
 	})
 
 	Describe("Testing the app", func() {
+		It("executes the test-command in the Appfile", func() {
+			appCmd := exec.Command(appBinPath, "test", fixture)
+			Eventually(execBin(appCmd), "1m").Should(gbytes.Say("ran-tests"))
+		})
 	})
 
 	Describe("init", func() {

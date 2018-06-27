@@ -83,11 +83,32 @@ var RunCommand = cli.Command{
 	},
 }
 
+var TestCommand = cli.Command{
+	Name: "test",
+	Action: func(ctx *cli.Context) error {
+		buildDir := resolveBuildDir(ctx.Args().First())
+		appfile := loadAppfile(filepath.Join(buildDir, "Appfile"))
+
+		build(buildDir, appfile.BuilderImage, appfile.Image, appfile.Bind, "lol/wtf")
+
+		runCmd := exec.Command("docker", "run", "--rm", "-i", "lol/wtf", appfile.Test)
+		runCmd.Stdin = os.Stdin
+		runCmd.Stdout = os.Stdout
+		runCmd.Stderr = os.Stderr
+		if err := runCmd.Run(); err != nil {
+			panic(err)
+		}
+
+		return nil
+	},
+}
+
 type Appfile struct {
 	BuilderImage string `yaml:"builder-image"`
 	Image        string
 	Bind         string
 	Command      string
+	Test         string
 }
 
 func loadAppfile(appfilePath string) *Appfile {
@@ -159,6 +180,7 @@ func main() {
 		BuildCommand,
 		RunCommand,
 		InitCommand,
+		TestCommand,
 	}
 
 	app.Run(os.Args)

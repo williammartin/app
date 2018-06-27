@@ -1,3 +1,4 @@
 image: cfgarden/hello
 bind: /tmp/app
 command: /hello
+test: /tmp/app/test
