@@ -20,41 +20,50 @@ var _ = Describe("Integration", func() {
 		fixture = "./test_assets/itchy"
 	})
 
-	JustBeforeEach(func() {
-		appCmd := exec.Command(appBinPath, "build", fixture, "-t", "my/app")
-		Eventually(execBin(appCmd)).Should(gexec.Exit(0))
-	})
-
-	AfterEach(func() {
-		removeImageCmd := exec.Command("docker", "image", "rm", "my/app")
-		Eventually(execBin(removeImageCmd)).Should(gexec.Exit(0))
-	})
-
-	Describe("with a local directory", func() {
-		It("creates a docker image with the requested tag", func() {
-			dockerCmd := execBin(exec.Command("docker", "image", "list"))
-			Eventually(dockerCmd).Should(gbytes.Say("my/app"))
+	Describe("build", func() {
+		JustBeforeEach(func() {
+			appCmd := exec.Command(appBinPath, "build", fixture, "-t", "my/app")
+			Eventually(execBin(appCmd)).Should(gexec.Exit(0))
 		})
 
-		Describe("the created image", func() {
-			var tempDir string
+		AfterEach(func() {
+			removeImageCmd := exec.Command("docker", "image", "rm", "my/app")
+			Eventually(execBin(removeImageCmd)).Should(gexec.Exit(0))
+		})
 
-			BeforeEach(func() {
-				tempDir = mktmp()
+		Describe("with a local directory", func() {
+			It("creates a docker image with the requested tag", func() {
+				dockerCmd := execBin(exec.Command("docker", "image", "list"))
+				Eventually(dockerCmd).Should(gbytes.Say("my/app"))
 			})
 
-			AfterEach(func() {
-				Expect(os.RemoveAll(tempDir)).To(Succeed())
-			})
+			Describe("the created image", func() {
+				var tempDir string
 
-			It("is based on the requested rootfs", func() {
-				combine("my/app", tempDir)
-				Expect(filepath.Join(tempDir, "img", "hello")).To(BeAnExistingFile())
-			})
+				BeforeEach(func() {
+					tempDir = mktmp()
+				})
 
-			It("has the user's code at the requested location", func() {
-				combine("my/app", tempDir)
-				Expect(filepath.Join(tempDir, "img", "tmp", "app", "myfile")).To(BeAnExistingFile())
+				AfterEach(func() {
+					Expect(os.RemoveAll(tempDir)).To(Succeed())
+				})
+
+				It("is based on the requested rootfs", func() {
+					combine("my/app", tempDir)
+					Expect(filepath.Join(tempDir, "img", "hello")).To(BeAnExistingFile())
+				})
+
+				It("has the user's code at the requested location", func() {
+					combine("my/app", tempDir)
+					Expect(filepath.Join(tempDir, "img", "tmp", "app", "myfile")).To(BeAnExistingFile())
+				})
+			})
+		})
+
+		Describe("Run the image", func() {
+			It("executes the command in the Appfile", func() {
+				appCmd := exec.Command(appBinPath, "run", fixture)
+				Eventually(execBin(appCmd)).Should(gbytes.Say("hello"))
 			})
 		})
 	})

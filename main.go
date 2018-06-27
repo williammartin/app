@@ -27,30 +27,63 @@ var BuildCommand = cli.Command{
 			panic("image tag must not be empty")
 		}
 
-		file, err := os.Open(filepath.Join(buildDir, "Appfile"))
-		if err != nil {
+		appfile := loadAppfile(filepath.Join(buildDir, "Appfile"))
+
+		build(buildDir, appfile.Image, appfile.Bind, imageTag)
+
+		return nil
+	},
+}
+
+var RunCommand = cli.Command{
+	Name: "run",
+	Action: func(ctx *cli.Context) error {
+		buildDir := ctx.Args().First()
+
+		appfile := loadAppfile(filepath.Join(buildDir, "Appfile"))
+
+		build(buildDir, appfile.Image, appfile.Bind, "lol/wtf")
+
+		runCmd := exec.Command("docker", "run", "--rm", "-i", "lol/wtf", appfile.Command)
+		runCmd.Stdin = os.Stdin
+		runCmd.Stdout = os.Stdout
+		runCmd.Stderr = os.Stderr
+		if err := runCmd.Run(); err != nil {
 			panic(err)
-		}
-
-		defer file.Close()
-
-		manifest := struct {
-			Image string
-			Bind  string
-		}{}
-		if err := yaml.NewDecoder(file).Decode(&manifest); err != nil {
-			panic(err)
-		}
-
-		dockerfile := fmt.Sprintf("FROM %s\nADD . %s", manifest.Image, manifest.Bind)
-		cmd := exec.Command("docker", "build", buildDir, "-t", imageTag, "-f", "-")
-		cmd.Stdin = bytes.NewBuffer([]byte(dockerfile))
-		if output, err := cmd.CombinedOutput(); err != nil {
-			panic(string(output))
 		}
 
 		return nil
 	},
+}
+
+type Appfile struct {
+	Image   string
+	Bind    string
+	Command string
+}
+
+func loadAppfile(appfilePath string) *Appfile {
+	file, err := os.Open(appfilePath)
+	if err != nil {
+		panic(err)
+	}
+	defer file.Close()
+
+	var appfile Appfile
+	if err := yaml.NewDecoder(file).Decode(&appfile); err != nil {
+		panic(err)
+	}
+
+	return &appfile
+}
+
+func build(buildDir, image, bind, tag string) {
+	dockerfile := fmt.Sprintf("FROM %s\nADD . %s", image, bind)
+	buildCmd := exec.Command("docker", "build", buildDir, "-t", tag, "-f", "-")
+	buildCmd.Stdin = bytes.NewBuffer([]byte(dockerfile))
+	if output, err := buildCmd.CombinedOutput(); err != nil {
+		panic(string(output))
+	}
 }
 
 func main() {
@@ -58,6 +91,7 @@ func main() {
 	app.Name = "app"
 	app.Commands = []cli.Command{
 		BuildCommand,
+		RunCommand,
 	}
 
 	app.Run(os.Args)
