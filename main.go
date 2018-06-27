@@ -175,7 +175,7 @@ func resolveBuildDir(dir string) string {
 
 func main() {
 	app := cli.NewApp()
-	app.Name = "app"
+	app.Name = "runa"
 	app.Commands = []cli.Command{
 		BuildCommand,
 		RunCommand,
