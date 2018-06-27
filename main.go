@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 
 	"github.com/codegangsta/cli"
 	yaml "gopkg.in/yaml.v2"
@@ -58,10 +59,8 @@ var RunCommand = cli.Command{
 
 		args := []string{"run", "--rm", "-i", "lol/wtf"}
 		if appfile.Command != "" {
-			args = append(args, appfile.Command)
+			args = append(args, "sh", "-c", appfile.Command+" "+strings.Join(ctx.Args().Tail(), " "))
 		}
-
-		args = append(args, ctx.Args().Tail()...)
 
 		// todo: remove lol/wtf and use --iid
 		runCmd := exec.Command("docker", args...)
@@ -109,7 +108,7 @@ var TestCommand = cli.Command{
 
 		build(buildDir, appfile.BuilderImage, appfile.Image, appfile.Bind, "lol/wtf")
 
-		runCmd := exec.Command("docker", "run", "--rm", "-i", "lol/wtf", appfile.Test)
+		runCmd := exec.Command("docker", "run", "--rm", "-i", "lol/wtf", "sh", "-c", appfile.Test)
 		runCmd.Stdin = os.Stdin
 		runCmd.Stdout = os.Stdout
 		runCmd.Stderr = os.Stderr
