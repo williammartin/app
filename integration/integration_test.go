@@ -30,8 +30,8 @@ var _ = Describe("Integration", func() {
 
 	Describe("build", func() {
 		JustBeforeEach(func() {
-			appCmd := exec.Command(appBinPath, "build", fixture, "-t", "my/app")
-			Eventually(execBin(appCmd), "5m").Should(gexec.Exit(0))
+			runaCmd := exec.Command(runaBinPath, "build", fixture, "-t", "my/app")
+			Eventually(execBin(runaCmd), "5m").Should(gexec.Exit(0))
 		})
 
 		AfterEach(func() {
@@ -78,8 +78,8 @@ var _ = Describe("Integration", func() {
 	Describe("Run the app", func() {
 		Context("with a local app", func() {
 			It("executes the command in the Appfile", func() {
-				appCmd := exec.Command(appBinPath, "run", fixture)
-				Eventually(execBin(appCmd), "5s").Should(gbytes.Say("hello"))
+				runaCmd := exec.Command(runaBinPath, "run", fixture)
+				Eventually(execBin(runaCmd), "5s").Should(gbytes.Say("hello"))
 			})
 
 			Context("when there is no appfile", func() {
@@ -87,37 +87,37 @@ var _ = Describe("Integration", func() {
 			})
 
 			It("allows overriding the command", func() {
-				appCmd := exec.Command(appBinPath, "run", fixture, "-c", "/tmp/app/hi")
-				Eventually(execBin(appCmd), "5s").Should(gbytes.Say("hi"))
+				runaCmd := exec.Command(runaBinPath, "run", fixture, "-c", "/tmp/app/hi")
+				Eventually(execBin(runaCmd), "5s").Should(gbytes.Say("hi"))
 			})
 
 			It("auto-builds go apps when the image is 'golang'", func() {
 				//todo: change overloading of image to "builder-image"
-				appCmd := exec.Command(appBinPath, "run", "./test_assets/uncompiled-golang")
-				Eventually(execBin(appCmd), "5m").Should(gbytes.Say("I got compiled!"))
+				runaCmd := exec.Command(runaBinPath, "run", "./test_assets/uncompiled-golang")
+				Eventually(execBin(runaCmd), "5m").Should(gbytes.Say("I got compiled!"))
 			})
 		})
 
 		Context("when the app is on GitHub", func() {
 			It("executes the command in the Appfile", func() {
-				appCmd := exec.Command(appBinPath, "run", "https://github.com/williammartin/myapp")
-				Eventually(execBin(appCmd), "1m").Should(gbytes.Say("hello"))
+				runaCmd := exec.Command(runaBinPath, "run", "https://github.com/williammartin/myapp")
+				Eventually(execBin(runaCmd), "1m").Should(gbytes.Say("hello"))
 			})
 		})
 	})
 
 	Describe("Testing the app", func() {
 		It("executes the test-command in the Appfile", func() {
-			appCmd := exec.Command(appBinPath, "test", fixture)
-			Eventually(execBin(appCmd), "1m").Should(gbytes.Say("ran-tests"))
+			runaCmd := exec.Command(runaBinPath, "test", fixture)
+			Eventually(execBin(runaCmd), "1m").Should(gbytes.Say("ran-tests"))
 		})
 	})
 
 	Describe("init", func() {
 		It("creates an appfile for the requested language", func() {
 			emptyDir := mktmp()
-			appCmd := exec.Command(appBinPath, "init", emptyDir)
-			Eventually(execBin(appCmd), "1m").Should(gexec.Exit(0))
+			runaCmd := exec.Command(runaBinPath, "init", emptyDir)
+			Eventually(execBin(runaCmd), "1m").Should(gexec.Exit(0))
 
 			b, err := ioutil.ReadFile(filepath.Join(emptyDir, "Appfile"))
 			Expect(err).NotTo(HaveOccurred())

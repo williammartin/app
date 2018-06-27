@@ -10,14 +10,14 @@ import (
 	"github.com/onsi/gomega/gexec"
 )
 
-var appBinPath string
+var runaBinPath string
 
 var _ = SynchronizedBeforeSuite(func() []byte {
 	preloadAssetImageCmd := exec.Command("docker", "pull", "cfgarden/hello")
 	Eventually(execBin(preloadAssetImageCmd), time.Hour).Should(gexec.Exit(0))
 
 	var err error
-	appBinPath, err = gexec.Build("github.com/williammartin/app")
+	runaBinPath, err = gexec.Build("github.com/williammartin/runa")
 	Expect(err).NotTo(HaveOccurred())
 
 	return []byte{}
