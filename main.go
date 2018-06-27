@@ -39,13 +39,24 @@ var BuildCommand = cli.Command{
 
 var RunCommand = cli.Command{
 	Name: "run",
+	Flags: []cli.Flag{
+		cli.StringFlag{
+			Name:  "command, c",
+			Usage: "command to run",
+		},
+	},
 	Action: func(ctx *cli.Context) error {
 		buildDir := resolveBuildDir(ctx.Args().First())
 		appfile := loadAppfile(filepath.Join(buildDir, "Appfile"))
 		build(buildDir, appfile.Image, appfile.Bind, "lol/wtf")
 
+		command := ctx.String("command")
+		if command == "" {
+			command = appfile.Command
+		}
+
 		// todo: remove lol/wtf and use --iid
-		runCmd := exec.Command("docker", "run", "--rm", "-i", "lol/wtf", appfile.Command)
+		runCmd := exec.Command("docker", "run", "--rm", "-i", "lol/wtf", command)
 		runCmd.Stdin = os.Stdin
 		runCmd.Stdout = os.Stdout
 		runCmd.Stderr = os.Stderr

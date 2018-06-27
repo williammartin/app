@@ -86,7 +86,10 @@ var _ = Describe("Integration", func() {
 				PIt("runs the app using the -i and -b flags", func() {})
 			})
 
-			PIt("allows overriding the command", func() {})
+			It("allows overriding the command", func() {
+				appCmd := exec.Command(appBinPath, "run", fixture, "-c", "/tmp/app/hi")
+				Eventually(execBin(appCmd), "5s").Should(gbytes.Say("hi"))
+			})
 		})
 
 		Context("when the app is on GitHub", func() {
@@ -95,6 +98,9 @@ var _ = Describe("Integration", func() {
 				Eventually(execBin(appCmd), "1m").Should(gbytes.Say("hello"))
 			})
 		})
+	})
+
+	Describe("Testing the app", func() {
 	})
 
 	Describe("The Init Command", func() {
