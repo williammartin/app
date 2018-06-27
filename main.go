@@ -2,10 +2,13 @@ package main
 
 import (
 	"bytes"
+	"fmt"
 	"os"
 	"os/exec"
+	"path/filepath"
 
 	"github.com/codegangsta/cli"
+	yaml "gopkg.in/yaml.v2"
 )
 
 var BuildCommand = cli.Command{
@@ -19,8 +22,29 @@ var BuildCommand = cli.Command{
 	Action: func(ctx *cli.Context) error {
 		buildDir := ctx.Args().First()
 
-		cmd := exec.Command("docker", "build", buildDir, "-t", "my/app", "-f", "-")
-		cmd.Stdin = bytes.NewBuffer([]byte("FROM scratch\nADD . tmp/app"))
+		imageTag := ctx.String("target")
+		if imageTag == "" {
+			panic("image tag must not be empty")
+		}
+
+		file, err := os.Open(filepath.Join(buildDir, "Appfile"))
+		if err != nil {
+			panic(err)
+		}
+
+		defer file.Close()
+
+		manifest := struct {
+			Image string
+			Bind  string
+		}{}
+		if err := yaml.NewDecoder(file).Decode(&manifest); err != nil {
+			panic(err)
+		}
+
+		dockerfile := fmt.Sprintf("FROM %s\nADD . %s", manifest.Image, manifest.Bind)
+		cmd := exec.Command("docker", "build", buildDir, "-t", imageTag, "-f", "-")
+		cmd.Stdin = bytes.NewBuffer([]byte(dockerfile))
 		if output, err := cmd.CombinedOutput(); err != nil {
 			panic(string(output))
 		}

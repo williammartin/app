@@ -2,7 +2,6 @@ package integration_test
 
 import (
 	"encoding/json"
-	"fmt"
 	"io/ioutil"
 	"os"
 	"os/exec"
@@ -23,8 +22,7 @@ var _ = Describe("Integration", func() {
 
 	JustBeforeEach(func() {
 		appCmd := exec.Command(appBinPath, "build", fixture, "-t", "my/app")
-		session := execBin(appCmd)
-		Eventually(session).Should(gexec.Exit(0))
+		Eventually(execBin(appCmd)).Should(gexec.Exit(0))
 	})
 
 	AfterEach(func() {
@@ -49,18 +47,20 @@ var _ = Describe("Integration", func() {
 				Expect(os.RemoveAll(tempDir)).To(Succeed())
 			})
 
-			PIt("is based on the requested rootfs", func() {
+			It("is based on the requested rootfs", func() {
+				combine("my/app", tempDir)
+				Expect(filepath.Join(tempDir, "img", "hello")).To(BeAnExistingFile())
 			})
 
 			It("has the user's code at the requested location", func() {
-				export("my/app", tempDir)
-				Expect(filepath.Join(tempDir, "layer0", "tmp", "app", "myfile")).To(BeAnExistingFile())
+				combine("my/app", tempDir)
+				Expect(filepath.Join(tempDir, "img", "tmp", "app", "myfile")).To(BeAnExistingFile())
 			})
 		})
 	})
 })
 
-func export(tag, dest string) {
+func combine(tag, dest string) {
 	Eventually(execBin(exec.Command("docker", "save", tag, "-o", filepath.Join(dest, "app.tar")))).Should(gexec.Exit(0))
 
 	tarCmd := exec.Command("tar", "xf", "app.tar")
@@ -72,8 +72,8 @@ func export(tag, dest string) {
 	Expect(err).NotTo(HaveOccurred())
 	json.NewDecoder(f).Decode(&s)
 
-	for i, layer := range s[0].Layers {
-		d := filepath.Join(dest, fmt.Sprintf("layer%d", i))
+	for _, layer := range s[0].Layers {
+		d := filepath.Join(dest, "img")
 		Expect(os.MkdirAll(d, 0755)).To(Succeed())
 		Eventually(execBin(exec.Command("tar", "xf", filepath.Join(dest, layer), "-C", d))).Should(gexec.Exit(0))
 	}

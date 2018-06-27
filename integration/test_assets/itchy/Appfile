@@ -1,2 +1,2 @@
-image: SCRATCH
+image: cfgarden/hello
 bind: /tmp/app
